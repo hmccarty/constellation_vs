@@ -1,1 +1,10 @@
+# Dataset results
+orb_features/
+sift_features/
+surf_features/
+orb_matches/
+
+# Python misc.
+env/
 venv/
+__pycache__/

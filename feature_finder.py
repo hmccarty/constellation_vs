@@ -1,37 +1,23 @@
-from os import walk, path, mkdir
-import cv2
+import cv2 as cv
+import numpy as np
 
-surf = cv2.xfeatures2d.SURF_create()
-sift = cv2.xfeatures2d.SIFT_create()
-
-for (root, dirs, files) in walk('raw_images'):
-    save_path = root.split("/")
-
-    # SIFT path setup
-    sift_path = save_path
-    sift_path[0] = "sift_images"
-    sift_path = "/".join(sift_path)
-    if not path.isdir(sift_path):
-        mkdir(sift_path)
+class FeatureFinder(object):
+    def __init__(self):
+        self.sift = cv.xfeatures2d.SIFT_create()
+        self.surf = cv.xfeatures2d.SURF_create(hessianThreshold=400)
+        self.orb = cv.ORB_create()
     
-    # SURF path setup
-    surf_path = save_path
-    surf_path[0] = "surf_images"
-    surf_path = "/".join(surf_path)
-    if not path.isdir(surf_path):
-        mkdir(surf_path)
+    def get_sift(self, img):
+        kp, des = self.sift.detectAndCompute(img, None)
+        featimg = cv.drawKeypoints(img, kp, None, (255,0,0), 4)
+        return featimg, kp, des
 
-    for f in files:
-        img = cv2.imread("{}/{}".format(root, f), 0)
+    def get_surf(self, img):
+        kp, des = self.surf.detectAndCompute(img, None)
+        featimg = cv.drawKeypoints(img, kp, None, (255,0,0), 4)
+        return featimg, kp, des
 
-        # SIFT feature detection
-        sift_file_path = "{}/{}".format(sift_path, f)
-        kp, des = sift.detectAndCompute(img, None)
-        img = cv2.drawKeypoints(img, kp, None, (255,0,0), 4)
-        cv2.imwrite(sift_file_path, img)
-
-        # SURF feature detection
-        surf_file_path = "{}/{}".format(surf_path, f)
-        kp, des = surf.detectAndCompute(img, None)
-        img = cv2.drawKeypoints(img, kp, None, (255,0,0), 4)
-        cv2.imwrite(surf_file_path, img)
+    def get_orb(self, img):
+        kp, des = self.orb.detectAndCompute(img, None)
+        featimg = cv.drawKeypoints(img, kp, None, (255, 0, 0), 4)
+        return featimg, kp, des
