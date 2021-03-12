@@ -8,3 +8,6 @@ orb_matches/
 env/
 venv/
 __pycache__/
+
+# Root folder images
+./*.jpg

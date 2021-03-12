@@ -11,8 +11,10 @@ class FeatureMatcher(object):
     SEARCH_PARAMS = dict(checks=50)
 
     def __init__(self):
+        self.matches = None
+
         # Setup ORB for brute-force matching
-        self.orb = cv.BFMatcher(cv.NORM_HAMMING, crossCheck=True)
+        self.orb = cv.BFMatcher(cv.NORM_HAMMING2, crossCheck=True)
         self.orbprev = None
 
         # Setup SIFT for Flann matching
@@ -28,12 +30,13 @@ class FeatureMatcher(object):
             if self.orbprev != None:
                 # Perform brute-force matching then sort by distance
                 matches = self.orb.match(self.orbprev[self.DES], des)
-                matches = sorted(matches, key = lambda x:x.distance)
+                matches = sorted(matches, key = lambda x:x.distance)[:3]
+                self.matches = matches
 
                 # Draw matches on new image
                 matchImg = cv.drawMatches(self.orbprev[self.IMG], self.orbprev[self.KP],
                                           img, kp,
-                                          matches[:10], None,
+                                          matches, None,
                                           flags=cv.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS)
             self.orbprev = (img, kp, des)
         else:
