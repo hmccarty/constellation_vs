@@ -10,6 +10,7 @@ class IBVS(object):
         self._L = None
         self._goal = None
         self._Z = 0.0
+        self._constellation = None
 
     def set_goal(self, features, Z):
         '''
