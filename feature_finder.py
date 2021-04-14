@@ -10,11 +10,13 @@ class FeatureFinder(object):
     
     def get_sift(self, img):
         kp, des = self.sift.detectAndCompute(img, None)
+        kp = kp[-10:]
         featimg = cv.drawKeypoints(img, kp, None, (255,0,0), 4)
         return featimg, kp, des
 
     def get_surf(self, img):
         kp, des = self.surf.detectAndCompute(img, None)
+        kp = kp[:5]
         featimg = cv.drawKeypoints(img, kp, None, (255,0,0), 4)
         return featimg, kp, des
 
@@ -22,6 +24,16 @@ class FeatureFinder(object):
         kp, des = self.orb.detectAndCompute(img, None)
         featimg = cv.drawKeypoints(img, kp, None, (255, 0, 0), 4)
         return featimg, kp, des
+
+    def get_root(self, kps, goal_pnt):
+        min = np.linalg.norm(goal_pnt - np.array(kps[0].pt))
+        min_kp = kps[0]
+        for kp in kps[1:]:
+            dist = np.linalg.norm(goal_pnt - np.array(kp.pt))
+            if dist < min:
+                min = dist
+                min_kp = kp
+        return min_kp
 
     def draw_keypoints(self, img, kp):
         return cv.drawKeypoints(img, kp, None, (255, 0, 0), 4)

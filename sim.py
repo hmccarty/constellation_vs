@@ -19,12 +19,12 @@ class Sim(object):
         p.changeVisualShape(planeId, -1, textureUniqueId=textureId)
         
         # Setup camera params
-        self.width = 224
-        self.height = 224
+        self.width = 450
+        self.height = 450
         self.fov = 45.0
-        self.aspect = 1.0
+        self.aspect = 1
         self.nearVal = 0.1
-        self.farVal = 3.1
+        self.farVal = 5.0
         self._projMatrix = p.computeProjectionMatrixFOV(fov=self.fov,
                                                         aspect=self.aspect,
                                                         nearVal=self.nearVal,
@@ -41,14 +41,19 @@ class Sim(object):
                                          self.upVector)
 
         # Capture and return single image frame
-        _, _, img, _, _ = p.getCameraImage(width=self.width,
+        _, _, rgb, depth, _ = p.getCameraImage(width=self.width,
                                             height=self.height,
                                             viewMatrix=viewMatrix,
-                                            projectionMatrix=self._projMatrix)
-        return cv.cvtColor(img, cv.COLOR_RGBA2RGB)
+                                            projectionMatrix=self._projMatrix,
+                                            renderer=p.ER_BULLET_HARDWARE_OPENGL,
+                                            flags=p.ER_NO_SEGMENTATION_MASK)
+        return cv.cvtColor(rgb, cv.COLOR_RGBA2RGB), depth
 
-    def applyVelocity(self, cmd):
-        self.camPosition += (cmd * self.dt)
+    def applyVelocity(self, tf):
+        translation = tf[:3]
+        rotation = tf[3:]
+        self.camPosition += (translation * self.dt)
+        # self.targetPosition += (rotation * self.dt)
     
     def getTargetDist(self):
         return np.linalg.norm(self.targetPosition - self.camPosition)

@@ -2,10 +2,11 @@ import cv2 as cv
 import numpy as np
 
 class IBVS(object):
-    def __init__(self, principal_pnt, focal_len, pixel_dim):
+    def __init__(self, principal_pnt, focal_x, focal_y, pxl_size):
         self._principal_pnt = principal_pnt
-        self._focal_len = focal_len
-        self._pixel_dim = pixel_dim
+        self._focal_x = focal_x
+        self._focal_y = focal_y
+        self._pxl_size = pxl_size
         self._lambda = 0.5
         self._L = None
         self._goal = None
@@ -53,7 +54,7 @@ class IBVS(object):
             Returns:
                 jacobian (2x6 numpy array): the iteraction matrix for a feature
         '''
-        pnt = self._feature_to_pnt(feature)
+        pnt = self._feature_to_pnt(feature, 1)
         x = pnt[0,0]
         y = pnt[0,1]
         Z = self._Z
@@ -61,10 +62,10 @@ class IBVS(object):
                          [0, -1/Z, y/Z, 1+y*y, -x*y, -x]])
 
     def _feature_set_to_pnts(self, features):
-        pnts = np.array([self._feature_to_pnt(f) for f in features])
+        pnts = np.array([self._feature_to_pnt(f, 1) for f in features])
         return pnts.flatten()
 
-    def _feature_to_pnt(self, feature):
+    def _feature_to_pnt(self, feature, z):
         '''
         Converts given feature into a point using camera features
 
@@ -72,11 +73,19 @@ class IBVS(object):
                 feature (1x2 numpy array): pos of a single feature
             
             Returns:
-                pnt (1x2 numpy array): pos of the cartesian pnt
+                pnt (1x3 numpy array): pos of the cartesian pnt
         '''
         pnt = feature - self._principal_pnt
-        if self._focal_len != 0:
-            pnt *= (1 / self._focal_len)
-        if self._pixel_dim != 0:
-            pnt[0,0] /= self._pixel_dim
-        return pnt
+        pnt[0] /= (self._focal_x * self._pxl_size)
+        pnt[1] /= (self._focal_y * self._pxl_size)
+        pnt *= z
+        return np.append(pnt, z)
+
+    def pnt_to_pxl(self, pnt):
+        pxl = pnt[:2]
+        if pnt[2] != 0:
+            pxl /= pnt[2]
+        pxl[0] *= (self._focal_x * self._pxl_size)
+        pxl[1] *= (self._focal_y * self._pxl_size)
+        pxl += self._principal_pnt
+        return pxl
