@@ -13,20 +13,19 @@ class IBVS(object):
         self._Z = 0.0
         self._constellation = None
 
-    def set_goal(self, features, Z):
+    def set_goal(self, features, depth):
         '''
         Sets goal features from goal pnt and current features.
 
             Parameters:
                 features (kx2 numpy array): features found in image
         '''
-        self._Z = Z
 
         for feature in features:
             if self._L is None:
-                self._L = self._get_jacobian(feature)
+                self._L = self._get_jacobian(feature, depth)
             else:
-                self._L = np.vstack((self._L, self._get_jacobian(feature)))
+                self._L = np.vstack((self._L, self._get_jacobian(feature, depth)))
         self._goal = self._feature_set_to_pnts(features)
 
     def execute(self, features):
@@ -43,29 +42,29 @@ class IBVS(object):
         vel = self._lambda * -np.dot(np.linalg.inv(self._L), err)
         return vel
 
-    def _get_jacobian(self, feature):
+    def _get_jacobian(self, feature, depth):
         '''
         Derives jacobian matrix for a given feature point
 
             Parameters:
-                feature (1x2 numpy array): pos of a single feature
+                feature (1x3 numpy array): pos of a single feature
                 goal (1x2 numpy goal): desired pos of feature
             
             Returns:
                 jacobian (2x6 numpy array): the iteraction matrix for a feature
         '''
-        pnt = self._feature_to_pnt(feature, 1)
-        x = pnt[0,0]
-        y = pnt[0,1]
-        Z = self._Z
+        pnt = self._feature_to_pnt(feature, depth)
+        x = pnt[0]
+        y = pnt[1]
+        Z = pnt[2]
         return np.array([[-1/Z, 0, x/Z, x*y, -(1+x*x), y],
                          [0, -1/Z, y/Z, 1+y*y, -x*y, -x]])
 
-    def _feature_set_to_pnts(self, features):
-        pnts = np.array([self._feature_to_pnt(f, 1) for f in features])
+    def _feature_set_to_pnts(self, features, depth):
+        pnts = np.array([self._feature_to_pnt(f, depth) for f in features])
         return pnts.flatten()
 
-    def _feature_to_pnt(self, feature, z):
+    def _feature_to_pnt(self, feature, depth):
         '''
         Converts given feature into a point using camera features
 
@@ -78,6 +77,7 @@ class IBVS(object):
         pnt = feature - self._principal_pnt
         pnt[0] /= (self._focal_x * self._pxl_size)
         pnt[1] /= (self._focal_y * self._pxl_size)
+        z = depth[int(feature[1]), int(feature[0])]
         pnt *= z
         return np.append(pnt, z)
 

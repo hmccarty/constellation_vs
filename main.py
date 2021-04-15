@@ -6,9 +6,6 @@ import numpy as np
 import time
 from ibvs import IBVS
 
-def get_depth(pnt, depth):
-    return depth[int(pnt[1]), int(pnt[0])]
-
 sim = Sim(headless=False)
 finder = FeatureFinder()
 # For intel:
@@ -18,10 +15,10 @@ ibvs = IBVS(np.array([225, 225]), 543.19, 543.19, 0.001)
 start = time.time()
 constellation = None
 goal_pnt = np.array([230, 300])
-while (time.time() - start) < 20:
+while (time.time() - start) < 60:
     # Move towards plane
     if sim.getTargetDist() > 1.5:
-        sim.applyVelocity(np.array([1.5, 0., -1.5, 0., 0., 0.]))
+        sim.applyVelocity(np.array([0., 0., -1.5, 0., 0., 0.]))
 
     # Get image from sim and find SURF keypoints
     rgb, depth = sim.step()
@@ -29,11 +26,11 @@ while (time.time() - start) < 20:
 
     if constellation is None:
         root = np.array(finder.get_root(kps, goal_pnt).pt)
-        root_pnt = ibvs._feature_to_pnt(root, get_depth(root, depth))
+        root_pnt = ibvs._feature_to_pnt(root, depth)
         constellation = np.zeros((len(kps), 3))
         for i in range(len(kps)):
             kp = np.array(kps[i].pt)
-            pnt = ibvs._feature_to_pnt(kp, get_depth(kp, depth))
+            pnt = ibvs._feature_to_pnt(kp, depth)
             constellation[i] = pnt - root_pnt
     else:
         max = 0
@@ -42,12 +39,12 @@ while (time.time() - start) < 20:
             root = finder.get_root(kps, goal_pnt)
             cnt = 0
             root_pnt = np.array(root.pt)
-            root_pnt = ibvs._feature_to_pnt(root_pnt, get_depth(root_pnt, depth))
+            root_pnt = ibvs._feature_to_pnt(root_pnt, depth)
 
             for pt in constellation:
                 for kp in kps:
                     kp_pnt = np.array(kp.pt)
-                    kp_pnt = ibvs._feature_to_pnt(kp_pnt, get_depth(kp_pnt, depth))
+                    kp_pnt = ibvs._feature_to_pnt(kp_pnt, depth)
                     if np.linalg.norm(kp_pnt - (root_pnt + pt)) < 10:
                         cnt += 1
                         break
@@ -56,10 +53,11 @@ while (time.time() - start) < 20:
                 maxRoot = root
             break
         root = np.array(maxRoot.pt)
-        root_pnt = ibvs._feature_to_pnt(root, get_depth(root, depth))
-        print(root_pnt)
+        root_pnt = ibvs._feature_to_pnt(root, depth)
+
         for pt in constellation:
             end = ibvs.pnt_to_pxl(pt + root_pnt)
+            print (end - root)
             cv.line(featimg, tuple(root.astype(int)), tuple(end.astype(int)), (0, 255, 0), 5)
                             
 
