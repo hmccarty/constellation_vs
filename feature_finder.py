@@ -26,10 +26,10 @@ class FeatureFinder(object):
         return featimg, kp, des
 
     def get_root(self, kps, goal_pnt):
-        min = np.linalg.norm(goal_pnt - np.array(kps[0].pt))
+        min = np.linalg.norm(goal_pnt[:2] - np.array(kps[0].pt))
         min_kp = kps[0]
         for kp in kps[1:]:
-            dist = np.linalg.norm(goal_pnt - np.array(kp.pt))
+            dist = np.linalg.norm(goal_pnt[2:] - np.array(kp.pt))
             if dist < min:
                 min = dist
                 min_kp = kp

@@ -6,7 +6,7 @@ import numpy as np
 import time
 from ibvs import IBVS
 
-sim = Sim(headless=False)
+sim = Sim(headless=True)
 finder = FeatureFinder()
 # For intel:
 # ibvs = IBVS(np.array([800, 450]), 1280, 1204, 0.0000014)
@@ -14,7 +14,7 @@ ibvs = IBVS(np.array([225, 225]), 543.19, 543.19, 0.001)
 
 start = time.time()
 constellation = None
-goal_pnt = np.array([230, 300])
+goal_pnt = np.array([230, 300, 0.5])
 while (time.time() - start) < 60:
     # Move towards plane
     if sim.getTargetDist() > 1.5:
@@ -27,7 +27,10 @@ while (time.time() - start) < 60:
     if constellation is None:
         root = np.array(finder.get_root(kps, goal_pnt).pt)
         root_pnt = ibvs._feature_to_pnt(root, depth)
+        diff = goal_pnt - root_pnt
         constellation = np.zeros((len(kps), 3))
+        ibvs.set_goal(kps, depth, diff)
+        print(ibvs.execute(kps, depth))
         for i in range(len(kps)):
             kp = np.array(kps[i].pt)
             pnt = ibvs._feature_to_pnt(kp, depth)
@@ -48,10 +51,12 @@ while (time.time() - start) < 60:
                     if np.linalg.norm(kp_pnt - (root_pnt + pt)) < 10:
                         cnt += 1
                         break
+
             if maxRoot is None or cnt > max:
                 max = cnt
                 maxRoot = root
             break
+
         root = np.array(maxRoot.pt)
         root_pnt = ibvs._feature_to_pnt(root, depth)
 
@@ -59,7 +64,6 @@ while (time.time() - start) < 60:
             end = ibvs.pnt_to_pxl(pt + root_pnt)
             print (end - root)
             cv.line(featimg, tuple(root.astype(int)), tuple(end.astype(int)), (0, 255, 0), 5)
-                            
 
     # Find keypoint closest to goal point
     # For each keypoint 
