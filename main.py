@@ -29,12 +29,13 @@ while (time.time() - start) < 60:
         root_pnt = ibvs._feature_to_pnt(root, depth)
         diff = goal_pnt - root_pnt
         constellation = np.zeros((len(kps), 3))
-        ibvs.set_goal(kps, depth, diff)
-        print(ibvs.execute(kps, depth))
         for i in range(len(kps)):
             kp = np.array(kps[i].pt)
             pnt = ibvs._feature_to_pnt(kp, depth)
             constellation[i] = pnt - root_pnt
+        print (len(kps))
+        ibvs.set_goal(kps, depth, diff)
+        print(ibvs.execute(kps, depth))
     else:
         max = 0
         maxRoot = None
