@@ -26,69 +26,64 @@ while (time.time() - start) < 60:
 
     if constellation is None:
         root = np.array(finder.get_root(kps, goal_pnt).pt)
-        root_pnt = ibvs._feature_to_pnt(root, depth)
+        root_pnt = ibvs.feature_to_pnt(root, depth)
         diff = goal_pnt - root_pnt
         constellation = np.zeros((len(kps), 3))
         for i in range(len(kps)):
             kp = np.array(kps[i].pt)
-            pnt = ibvs._feature_to_pnt(kp, depth)
+            pnt = ibvs.feature_to_pnt(kp, depth)
             constellation[i] = pnt - root_pnt
-        print (len(kps))
-        ibvs.set_goal(kps, depth, diff)
-        print(ibvs.execute(kps, depth))
+        # print (len(kps))
+        ibvs.set_goal(ibvs.kps_to_feature(kps), depth, diff)
+        print(ibvs.execute(ibvs.kps_to_feature(kps), depth))
     else:
-        max = 0
-        maxRoot = None
+        min_sse = 0
+        min_root = None
         for root in kps:
-            root = finder.get_root(kps, goal_pnt)
+            # root = finder.get_root(kps, goal_pnt)
             cnt = 0
             root_pnt = np.array(root.pt)
-            root_pnt = ibvs._feature_to_pnt(root_pnt, depth)
-
+            root_pnt = ibvs.feature_to_pnt(root_pnt, depth)
+            used_kps = []
+            sse = 0
             for pt in constellation:
+                min_err = 1000
+                min_err_kp = None
                 for kp in kps:
-                    kp_pnt = np.array(kp.pt)
-                    kp_pnt = ibvs._feature_to_pnt(kp_pnt, depth)
-                    if np.linalg.norm(kp_pnt - (root_pnt + pt)) < 10:
-                        cnt += 1
-                        break
+                    if kp not in used_kps:
+                        kp_pnt = np.array(kp.pt)
+                        kp_pnt = ibvs.feature_to_pnt(kp_pnt, depth)
+                        if np.linalg.norm(kp_pnt - (root_pnt + pt)) < min_err:
+                            min_err = np.linalg.norm(kp_pnt - (root_pnt + pt))
+                            min_err_kp = kp
+                used_kps.append(min_err_kp)
+                sse += (min_err**2)
 
-            if maxRoot is None or cnt > max:
-                max = cnt
-                maxRoot = root
-            break
+            if min_root is None or sse < min_sse:
+                min_root = root
+                min_sse = sse
 
-        root = np.array(maxRoot.pt)
-        root_pnt = ibvs._feature_to_pnt(root, depth)
+        root = np.array(min_root.pt)
+        root_pnt = ibvs.feature_to_pnt(root, depth)
 
         for pt in constellation:
-            end = ibvs.pnt_to_pxl(pt + root_pnt)
-            print (end - root)
+            end = ibvs.pnt_to_feature(pt + root_pnt)
+            # print (end - root)
             cv.line(featimg, tuple(root.astype(int)), tuple(end.astype(int)), (0, 255, 0), 5)
 
-    # Find keypoint closest to goal point
-    # For each keypoint 
-        # Check each constellation point
-        # Count number of matches
-        # If number of matches is == to size of constellation
-            # Use constellation
-        # Else check if max
-            # Set max
-    # Use max matches
-    # Draw constellation
-    # Update goal by constellation root
-    # root = finder.get_root(kp, goal_pnt)
-    # root_x = int(root.pt[0])
-    # root_y = int(root.pt[1])
+        print(ibvs.execute(ibvs.kps_to_feature(kps), depth))
 
     # # Draw root
     # cv.circle(featimg, (root_x, root_y), 15, (255, 0, 0), -1)
 
     # Draw goal
-    cv.circle(featimg, tuple(goal_pnt), 15, (0, 0, 255), -1)
+    goal_tup = (int(goal_pnt[0]), int(goal_pnt[1]))
+    cv.circle(featimg, goal_tup, 15, (0, 0, 255), -1)
 
     # Show image and sleep for sim
     cv.imshow("SIFT Features", featimg)
     cv.waitKey()
     # time.sleep(sim.dt)
+
+cv.destroyAllWindows()
 sim.disconnect()

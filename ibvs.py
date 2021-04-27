@@ -21,17 +21,12 @@ class IBVS(object):
                 features (kx2 numpy array): features found in image
         '''
 
-        i = 0
         for feature in features:
-            feature = np.array(feature.pt)
             if self._L is None:
                 self._L = self._get_jacobian(feature, depth, diff)
             else:
                 self._L = np.vstack((self._L, self._get_jacobian(feature, depth, diff)))
-            i += 1
-            if i == 3:
-                break
-        self._goal = self._feature_set_to_pnts(features, depth)
+        self._goal = np.array(features)
 
     def execute(self, features, depth):
         '''
@@ -43,8 +38,9 @@ class IBVS(object):
             Returns:
                 command (6x1 numpy array): 6DoF velocity command
         '''
-        err = self._feature_set_to_pnts(features, depth) - self._goal
-        vel = self._lambda * -np.dot(np.linalg.inv(self._L), err)
+        err = features - self._goal
+        err = err.flatten()
+        vel = self._lambda * -np.dot(np.linalg.pinv(self._L), err)
         return vel
 
     def _get_jacobian(self, feature, depth, diff):
@@ -58,7 +54,7 @@ class IBVS(object):
             Returns:
                 jacobian (2x6 numpy array): the iteraction matrix for a feature
         '''
-        pnt = self._feature_to_pnt(feature, depth)
+        pnt = self.feature_to_pnt(feature, depth)
         pnt += diff
         x = pnt[0]
         y = pnt[1]
@@ -66,16 +62,24 @@ class IBVS(object):
         return np.array([[-1/Z, 0, x/Z, x*y, -(1+x*x), y],
                          [0, -1/Z, y/Z, 1+y*y, -x*y, -x]])
 
-    def _feature_set_to_pnts(self, features, depth):
-        pnts = np.array([self._feature_to_pnt(np.array(f.pt), depth) for f in features])
+    def feature_set_to_pnts(self, features, depth):
+        pnts = np.array([self.feature_to_pnt(np.array(f.pt), depth) for f in features])
         return pnts
 
-    def _feature_to_pnt(self, feature, depth):
+    def kps_to_feature(self, kps):
+        feature = np.zeros((len(kps), 2))
+        for i in range(len(kps)):
+            feature[i, 0] = int(kps[i].pt[0])
+            feature[i, 1] = int(kps[i].pt[1])
+        return feature
+
+    def feature_to_pnt(self, feature, depth):
         '''
         Converts given feature into a point using camera features
 
             Parameters:
                 feature (1x2 numpy array): pos of a single feature
+                depth (wxh numpy array): physical depth of every pixel
             
             Returns:
                 pnt (1x3 numpy array): pos of the cartesian pnt
@@ -87,11 +91,11 @@ class IBVS(object):
         pnt *= z
         return np.append(pnt, z)
 
-    def pnt_to_pxl(self, pnt):
-        pxl = pnt[:2]
+    def pnt_to_feature(self, pnt):
+        feature = pnt[:2]
         if pnt[2] != 0:
-            pxl /= pnt[2]
-        pxl[0] *= (self._focal_x * self._pxl_size)
-        pxl[1] *= (self._focal_y * self._pxl_size)
-        pxl += self._principal_pnt
-        return pxl
+            feature /= pnt[2]
+        feature[0] *= (self._focal_x * self._pxl_size)
+        feature[1] *= (self._focal_y * self._pxl_size)
+        feature += self._principal_pnt
+        return feature

@@ -16,7 +16,7 @@ class FeatureFinder(object):
 
     def get_surf(self, img):
         kp, des = self.surf.detectAndCompute(img, None)
-        kp = kp[:3]
+        kp = kp[:4]
         featimg = cv.drawKeypoints(img, kp, None, (255,0,0), 4)
         return featimg, kp, des
 
