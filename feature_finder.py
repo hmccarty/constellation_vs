@@ -16,7 +16,7 @@ class FeatureFinder(object):
 
     def get_surf(self, img):
         kp, des = self.surf.detectAndCompute(img, None)
-        kp = kp[:4]
+        kp = kp[:6]
         featimg = cv.drawKeypoints(img, kp, None, (255,0,0), 4)
         return featimg, kp, des
 
@@ -25,11 +25,11 @@ class FeatureFinder(object):
         featimg = cv.drawKeypoints(img, kp, None, (255, 0, 0), 4)
         return featimg, kp, des
 
-    def get_root(self, kps, goal_pnt):
-        min = np.linalg.norm(goal_pnt[:2] - np.array(kps[0].pt))
+    def get_root(self, kps, goal_pxl):
+        min = np.linalg.norm(goal_pxl - np.array(kps[0].pt))
         min_kp = kps[0]
         for kp in kps[1:]:
-            dist = np.linalg.norm(goal_pnt[2:] - np.array(kp.pt))
+            dist = np.linalg.norm(goal_pxl - np.array(kp.pt))
             if dist < min:
                 min = dist
                 min_kp = kp

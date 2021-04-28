@@ -15,8 +15,12 @@ class Sim(object):
         
         # Load and texture plane with features
         planeId = p.loadURDF('plane.urdf')
-        textureId = p.loadTexture('texture.png')
+        textureId = p.loadTexture('untitled.png')
         p.changeVisualShape(planeId, -1, textureUniqueId=textureId)
+
+        cubeId = p.loadURDF('cube.urdf', globalScaling=1.5)
+        textureId = p.loadTexture('texture.png')
+        p.changeVisualShape(cubeId, -1, textureUniqueId=textureId)
         
         # Setup camera params
         self.width = 450
