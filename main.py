@@ -42,11 +42,13 @@ while (time.time() - start) < 10:
         # Assign 4 other features to be members of constellation
         constellation_pxls = np.zeros((CONSTELLATION_SIZE, 2))
         constellation_pnts = np.zeros((CONSTELLATION_SIZE, 3))
-        for i in range(4):
+        last_pnt = root_pnt
+        for i in range(CONSTELLATION_SIZE):
             pxl = np.array(kps[i].pt)
             pnt = ibvs.feature_to_pnt(pxl, depth)
             constellation_pxls[i] = pxl
-            constellation_pnts[i] = pnt - root_pnt
+            constellation_pnts[i] = pnt - last_pnt
+            last_pnt = pnt
 
         # Set goal features and image jacobian
         ibvs.set_goal(constellation_pxls, depth, diff)
@@ -66,16 +68,17 @@ while (time.time() - start) < 10:
             sse = 0
             used_kps = []
             curr_constellation_pxls = None
+            last_pnt = root_pnt
 
             for pnt in constellation_pnts:
                 # If error is greater than 35, don't bother checking
-                min_err = 35
+                min_err = 75
                 min_err_kp = None
                 for kp in kps:
                     if kp not in used_kps:
                         kp_pxl = np.array(kp.pt)
                         kp_pnt = ibvs.feature_to_pnt(kp_pxl, depth)
-                        err = np.linalg.norm(kp_pnt - (root_pnt + pnt))
+                        err = np.linalg.norm(kp_pnt - (last_pnt + pnt))
                         if err < min_err:
                             min_err = err
                             min_err_kp = kp
@@ -90,6 +93,7 @@ while (time.time() - start) < 10:
                     else:
                         curr_constellation_pxls = np.vstack(
                             (curr_constellation_pxls, min_err_kp.pt))
+                    last_pnt = ibvs.feature_to_pnt(np.array(min_err_kp.pt), depth)
                 sse += (min_err**2)
 
             if min_root is None or sse < min_sse:
@@ -116,10 +120,13 @@ while (time.time() - start) < 10:
             pos = (int(pxl[0]), int(pxl[1]))
             cv.circle(featimg, pos, 5, (0, 255, 0), -1)
 
+        last_pnt = root_pnt
         for pnt in constellation_pnts:
-            end = ibvs.pnt_to_feature(pnt + root_pnt)
-            cv.line(featimg, tuple(root_pxl.astype(int)),
+            begin = ibvs.pnt_to_feature(last_pnt)
+            end = ibvs.pnt_to_feature(pnt + last_pnt)
+            cv.line(featimg, tuple(begin.astype(int)),
                     tuple(end.astype(int)), (0, 255, 0), 5)
+            last_pnt += pnt
 
         # Draw expected location of constellation to output image
         for pxl in ibvs._goal:
