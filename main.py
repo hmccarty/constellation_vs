@@ -6,117 +6,138 @@ import numpy as np
 import time
 from ibvs import IBVS
 
+CONSTELLATION_SIZE = 4
+
 sim = Sim(headless=True)
 finder = FeatureFinder()
-# For intel:
+
+# Intel camera configuration:
 # ibvs = IBVS(np.array([800, 450]), 1280, 1204, 0.0000014)
+
+# Sim camera configuration:
 ibvs = IBVS(np.array([225, 225]), 543.19, 543.19, 0.001)
 
 start = time.time()
-constellation = None
-goal_pxl = np.array([230., 300.])
+prev_root_pnt = None
+constellation_pnts = None
+target_pxl = np.array([230., 300.])
+goal_pxl = np.array([225., 225.])
 while (time.time() - start) < 60:
     # Get image from sim and find SURF keypoints
     rgb, depth = sim.step()
     featimg, kps, des = finder.get_surf(rgb)
-    vel = None
+
+    # Convert target and goal pixels to cartesian space
+    target_pnt = ibvs.feature_to_pnt(target_pxl, depth)
     goal_pnt = ibvs.feature_to_pnt(goal_pxl, depth)
 
-    if constellation is None:
-        root = np.array(finder.get_root(kps, goal_pxl).pt)
-        root_pnt = ibvs.feature_to_pnt(root, depth)
-        diff = goal_pnt - root_pnt
-        # print(diff)
-        constellation_kps = np.zeros((4, 2))
-        constellation = np.zeros((len(kps), 3))
-        for i in range(4):
-            constellation_kps[i] = np.array(kps[i].pt)
-            kp = np.array(kps[i].pt)
-            pnt = ibvs.feature_to_pnt(kp, depth)
-            constellation[i] = pnt - root_pnt
+    if constellation_pnts is None:
+        # Find distance from convergence
+        diff = goal_pnt - target_pnt
 
-        ibvs.set_goal(constellation_kps, depth, diff)
-        vel = ibvs.execute(constellation_kps, depth)
+        # Assign feature closest to target pixel as root
+        root_pxl = np.array(finder.get_root(kps, target_pxl).pt)
+        root_pnt = ibvs.feature_to_pnt(root_pxl, depth)
+
+        # Assign 4 other features to be members of constellation
+        constellation_pxls = np.zeros((CONSTELLATION_SIZE, 2))
+        constellation_pnts = np.zeros((CONSTELLATION_SIZE, 3))
+        for i in range(4):
+            pxl = np.array(kps[i].pt)
+            pnt = ibvs.feature_to_pnt(pxl, depth)
+            constellation_pxls[i] = pxl
+            constellation_pnts[i] = pnt - root_pnt
+
+        # Set goal features and image jacobian
+        ibvs.set_goal(constellation_pxls, depth, diff)
+
+        # Get first velocity command
+        vel = ibvs.execute(constellation_pxls, depth)
     else:
         min_sse = 0
         min_root = None
+        constellation_pxls = None
+        for kp in kps:
+            # Assign keypoint as root
+            root_pxl = np.array(kp.pt)
+            root_pnt = ibvs.feature_to_pnt(root_pxl, depth)
 
-        constellation_kps = None
-        for root in kps:
-            # root = finder.get_root(kps, goal_pnt)
-            root_pnt = np.array(root.pt)
-            root_pnt = ibvs.feature_to_pnt(root_pnt, depth)
-            used_kps = []
-            curr_constellation_kps = None
+            # Find set of features which minimize SSE from constellation
             sse = 0
-            i = 0
-            print(constellation)
-            for pt in constellation:
-                if i == 4:
-                    break
+            used_kps = []
+            curr_constellation_pxls = None
+
+            for pnt in constellation_pnts:
+                # If error is greater than 35, don't bother checking
                 min_err = 35
                 min_err_kp = None
                 for kp in kps:
                     if kp not in used_kps:
-                        kp_pnt = np.array(kp.pt)
-                        kp_pnt = ibvs.feature_to_pnt(kp_pnt, depth)
-                        if np.linalg.norm(kp_pnt - (root_pnt + pt)) < min_err:
-                            min_err = np.linalg.norm(kp_pnt - (root_pnt + pt))
+                        kp_pxl = np.array(kp.pt)
+                        kp_pnt = ibvs.feature_to_pnt(kp_pxl, depth)
+                        err = np.linalg.norm(kp_pnt - (root_pnt + pnt))
+                        if err < min_err:
+                            min_err = err
                             min_err_kp = kp
-                if min_err_kp is not None:
-                    used_kps.append(min_err_kp)
-                    if curr_constellation_kps is None:
-                        curr_constellation_kps = min_err_kp.pt
-                    else:
-                        curr_constellation_kps = np.vstack(
-                            (curr_constellation_kps, min_err_kp.pt))
-                sse += (min_err**2)
-                i += 1
-            print(sse)
-            if min_root is None or sse < min_sse:
-                min_root = root
-                min_sse = sse
-                constellation_kps = curr_constellation_kps
 
-        if len(constellation_kps) < 4:
+                if min_err_kp is not None:
+                    # Prevent feature from being reused in constellation
+                    used_kps.append(min_err_kp)
+
+                    # Attach feature pxl to current constellation build
+                    if curr_constellation_pxls is None:
+                        curr_constellation_pxls = min_err_kp.pt
+                    else:
+                        curr_constellation_pxls = np.vstack(
+                            (curr_constellation_pxls, min_err_kp.pt))
+                sse += (min_err**2)
+
+            if min_root is None or sse < min_sse:
+                min_root = root_pxl
+                min_sse = sse
+                constellation_pxls = curr_constellation_pxls
+
+        if len(constellation_pxls) < CONSTELLATION_SIZE:
             constellation = None
         else:
-            print(len(constellation_kps))
-            root = np.array(min_root.pt)
-            root_pnt = ibvs.feature_to_pnt(root, depth)
+            root_pxl = min_root
+            root_pnt = ibvs.feature_to_pnt(root_pxl, depth)
 
-            if constellation is not None:
-                for pt in constellation:
-                    end = ibvs.pnt_to_feature(pt + root_pnt)
-                    # print (end - root)
-                    cv.line(featimg, tuple(root.astype(int)),
-                            tuple(end.astype(int)), (0, 255, 0), 5)
+            # Draw line from target point to root
+            cv.line(featimg, tuple(root_pxl.astype(int)), tuple(
+                target_pxl.astype(int)), (255, 0, 0), 5)
 
-            cv.line(featimg, tuple(root.astype(int)), tuple(
-                goal_pxl.astype(int)), (255, 0, 0), 5)
+            # Calculate iterative velocity command
+            vel = ibvs.execute(constellation_pxls, depth)
 
-            vel = ibvs.execute(constellation_kps, depth)
-
-    if constellation is not None:
-        # # Draw root
-        # cv.circle(featimg, (root_x, root_y), 15, (255, 0, 0), -1
-        for pxl in constellation_kps:
+    if constellation_pnts is not None:
+        # Draw constellation to output image
+        for pxl in constellation_pxls:
             pos = (int(pxl[0]), int(pxl[1]))
-            # print(pos)
             cv.circle(featimg, pos, 5, (0, 255, 0), -1)
 
-        # print(vel)
-        vel[1] *= -1
+        for pnt in constellation_pnts:
+            end = ibvs.pnt_to_feature(pnt + root_pnt)
+            cv.line(featimg, tuple(root_pxl.astype(int)),
+                    tuple(end.astype(int)), (0, 255, 0), 5)
+
+        # Draw expected location of constellation to output image
+        for pxl in ibvs._goal:
+            pos = (int(pxl[0]), int(pxl[1]))
+            cv.circle(featimg, pos, 5, (0, 125, 125), -1)
+
+        # Use velocity command to converge goal to target
         sim.applyVelocity(vel)
 
-    for pxl in ibvs._goal:
-        pos = (int(pxl[0]), int(pxl[1]))
-        # print(pos)
-        cv.circle(featimg, pos, 5, (0, 125, 125), -1)
+        if prev_root_pnt is not None:
+            target_pnt += (root_pnt - prev_root_pnt)
+        prev_root_pnt = root_pnt
+    else:
+        prev_root_pnt = None
 
-    # Draw goal
-    goal_pxl = ibvs.pnt_to_feature(goal_pnt)
-    cv.circle(featimg, tuple(goal_pxl.astype(int)), 15, (0, 0, 255), -1)
+    # Draw target
+    target_pxl = ibvs.pnt_to_feature(target_pnt)
+    cv.circle(featimg, tuple(target_pxl.astype(int)), 15, (0, 0, 255), -1)
 
     # Show image and sleep for sim
     cv.imshow("SIFT Features", featimg)

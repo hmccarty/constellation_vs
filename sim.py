@@ -55,17 +55,18 @@ class Sim(object):
         return cv.cvtColor(rgb, cv.COLOR_RGBA2RGB), depth
 
     def applyVelocity(self, tf):
+        # Translate camera
         translation = tf[:3] * self.dt
-        rotation = tf[3:] * self.dt
-        rotation = tf3d.euler.euler2mat(rotation[0], rotation[1], rotation[2])
+        translation[1] *= -1
         self.camPosition += translation
         self.targetPosition += translation
+
+        # Rotate camera
+        rotation = tf[3:] * self.dt
+        rotation = tf3d.euler.euler2mat(rotation[0], rotation[1], rotation[2])
         unit = self.targetPosition - self.camPosition
-        print(rotation)
         self.targetPosition = self.camPosition + np.matmul(rotation, unit)
         self.upVector = np.matmul(rotation, self.upVector)
-        print(self.targetPosition)
-        print(np.matmul(rotation, unit))
     
     def getTargetDist(self):
         return np.linalg.norm(self.targetPosition - self.camPosition)
