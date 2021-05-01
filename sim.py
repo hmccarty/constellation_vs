@@ -2,6 +2,7 @@ import pybullet as p
 import pybullet_data
 import cv2 as cv
 import numpy as np
+import transforms3d as tf3d
 
 class Sim(object):
     def __init__(self, headless=False):
@@ -54,11 +55,17 @@ class Sim(object):
         return cv.cvtColor(rgb, cv.COLOR_RGBA2RGB), depth
 
     def applyVelocity(self, tf):
-        translation = tf[:3]
-        rotation = tf[3:]
-        self.camPosition += (translation * self.dt)
-        self.targetPosition += (translation * self.dt)
-        # self.targetPosition += (rotation * self.dt)
+        translation = tf[:3] * self.dt
+        rotation = tf[3:] * self.dt
+        rotation = tf3d.euler.euler2mat(rotation[0], rotation[1], rotation[2])
+        self.camPosition += translation
+        self.targetPosition += translation
+        unit = self.targetPosition - self.camPosition
+        print(rotation)
+        self.targetPosition = self.camPosition + np.matmul(rotation, unit)
+        self.upVector = np.matmul(rotation, self.upVector)
+        print(self.targetPosition)
+        print(np.matmul(rotation, unit))
     
     def getTargetDist(self):
         return np.linalg.norm(self.targetPosition - self.camPosition)
