@@ -35,7 +35,7 @@ class Sim(object):
                                                         nearVal=self.nearVal,
                                                         farVal=self.farVal)
         
-        self.camPosition = np.array([0., 0., 4.])
+        self.camPosition = np.array([-0.5, 1.0, 4.])
         self.targetPosition = np.array([0., 0., 0.])
         self.upVector = np.array([0., 1., 0.])
 

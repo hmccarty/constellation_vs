@@ -41,9 +41,7 @@ class IBVS(object):
             Returns:
                 command (6x1 numpy array): 6DoF velocity command
         '''
-        err = features - self._goal
-        err = err.flatten()
-        print(err)
+        err = (features - self._goal).flatten()
         vel = self._lambda * -np.dot(np.linalg.pinv(self._L), err)
         return vel
 

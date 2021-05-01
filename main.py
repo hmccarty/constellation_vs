@@ -22,7 +22,7 @@ prev_root_pnt = None
 constellation_pnts = None
 target_pxl = np.array([230., 300.])
 goal_pxl = np.array([225., 225.])
-while (time.time() - start) < 60:
+while (time.time() - start) < 10:
     # Get image from sim and find SURF keypoints
     rgb, depth = sim.step()
     featimg, kps, des = finder.get_surf(rgb)
@@ -98,7 +98,7 @@ while (time.time() - start) < 60:
                 constellation_pxls = curr_constellation_pxls
 
         if len(constellation_pxls) < CONSTELLATION_SIZE:
-            constellation = None
+            constellation_pnts = None
         else:
             root_pxl = min_root
             root_pnt = ibvs.feature_to_pnt(root_pxl, depth)
@@ -138,6 +138,9 @@ while (time.time() - start) < 60:
     # Draw target
     target_pxl = ibvs.pnt_to_feature(target_pnt)
     cv.circle(featimg, tuple(target_pxl.astype(int)), 15, (0, 0, 255), -1)
+
+    # Draw goal
+    cv.circle(featimg, tuple(goal_pxl.astype(int)), 15, (125, 125, 0), -1)
 
     # Show image and sleep for sim
     cv.imshow("SIFT Features", featimg)
