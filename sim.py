@@ -10,7 +10,7 @@ class Sim(object):
         else:
             self._client = p.connect(p.GUI)
         p.setAdditionalSearchPath(pybullet_data.getDataPath())
-        p.setGravity(0, 0, -10)
+        p.setGravity(0, 0, 0)
         self.dt = 1./240.
         
         # Load and texture plane with features
@@ -18,7 +18,7 @@ class Sim(object):
         textureId = p.loadTexture('untitled.png')
         p.changeVisualShape(planeId, -1, textureUniqueId=textureId)
 
-        cubeId = p.loadURDF('cube.urdf', globalScaling=1.5)
+        cubeId = p.loadURDF('cube.urdf', [0, 0, 1], p.getQuaternionFromEuler([0,0,0]), globalScaling=1.5)
         textureId = p.loadTexture('texture.png')
         p.changeVisualShape(cubeId, -1, textureUniqueId=textureId)
         
@@ -34,7 +34,7 @@ class Sim(object):
                                                         nearVal=self.nearVal,
                                                         farVal=self.farVal)
         
-        self.camPosition = np.array([0., 0., 3.])
+        self.camPosition = np.array([0., 0., 4.])
         self.targetPosition = np.array([0., 0., 0.])
         self.upVector = np.array([0., 1., 0.])
 
@@ -57,6 +57,7 @@ class Sim(object):
         translation = tf[:3]
         rotation = tf[3:]
         self.camPosition += (translation * self.dt)
+        self.targetPosition += (translation * self.dt)
         # self.targetPosition += (rotation * self.dt)
     
     def getTargetDist(self):
