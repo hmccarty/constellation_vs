@@ -4,6 +4,7 @@ import cv2 as cv
 import numpy as np
 import transforms3d as tf3d
 
+
 class Sim(object):
     def __init__(self, headless=False):
         if headless:
@@ -13,16 +14,17 @@ class Sim(object):
         p.setAdditionalSearchPath(pybullet_data.getDataPath())
         p.setGravity(0, 0, 0)
         self.dt = 1./240.
-        
+
         # Load and texture plane with features
         planeId = p.loadURDF('plane.urdf')
         textureId = p.loadTexture('untitled.png')
         p.changeVisualShape(planeId, -1, textureUniqueId=textureId)
 
-        cubeId = p.loadURDF('cube.urdf', [0, 0, 1], p.getQuaternionFromEuler([0,0,0]), globalScaling=1.5)
+        cubeId = p.loadURDF('cube.urdf', [0, 0, 1], p.getQuaternionFromEuler(
+            [0, 0, 0]), globalScaling=1.5)
         textureId = p.loadTexture('texture.png')
         p.changeVisualShape(cubeId, -1, textureUniqueId=textureId)
-        
+
         # Setup camera params
         self.width = 450
         self.height = 450
@@ -34,7 +36,7 @@ class Sim(object):
                                                         aspect=self.aspect,
                                                         nearVal=self.nearVal,
                                                         farVal=self.farVal)
-        
+
         self.camPosition = np.array([-0.5, 1.0, 4.])
         self.targetPosition = np.array([0., 0., 0.])
         self.upVector = np.array([0., 1., 0.])
@@ -47,11 +49,11 @@ class Sim(object):
 
         # Capture and return single image frame
         _, _, rgb, depth, _ = p.getCameraImage(width=self.width,
-                                            height=self.height,
-                                            viewMatrix=viewMatrix,
-                                            projectionMatrix=self._projMatrix,
-                                            renderer=p.ER_BULLET_HARDWARE_OPENGL,
-                                            flags=p.ER_NO_SEGMENTATION_MASK)
+                                               height=self.height,
+                                               viewMatrix=viewMatrix,
+                                               projectionMatrix=self._projMatrix,
+                                               renderer=p.ER_BULLET_HARDWARE_OPENGL,
+                                               flags=p.ER_NO_SEGMENTATION_MASK)
         return cv.cvtColor(rgb, cv.COLOR_RGBA2RGB), depth
 
     def applyVelocity(self, tf):
@@ -63,11 +65,12 @@ class Sim(object):
 
         # Rotate camera
         rotation = tf[3:] * self.dt
+        rotation[2] += 0.1
         rotation = tf3d.euler.euler2mat(rotation[0], rotation[1], rotation[2])
         unit = self.targetPosition - self.camPosition
         self.targetPosition = self.camPosition + np.matmul(rotation, unit)
         self.upVector = np.matmul(rotation, self.upVector)
-    
+
     def getTargetDist(self):
         return np.linalg.norm(self.targetPosition - self.camPosition)
 

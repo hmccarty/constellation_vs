@@ -100,7 +100,7 @@ class IBVS(object):
         return np.append(pnt, z)
 
     def pnt_to_feature(self, pnt):
-        feature = pnt[:2]
+        feature = np.array([pnt[0], pnt[1]])
         if pnt[2] != 0:
             feature /= pnt[2]
         feature[0] *= (self._focal_x * self._pxl_size)

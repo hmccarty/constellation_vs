@@ -41,14 +41,16 @@ while (time.time() - start) < 10:
 
         # Assign 4 other features to be members of constellation
         constellation_pxls = np.zeros((CONSTELLATION_SIZE, 2))
-        constellation_pnts = np.zeros((CONSTELLATION_SIZE, 3))
-        last_pnt = root_pnt
+        constellation_pnts = np.zeros((CONSTELLATION_SIZE, 2))
         for i in range(CONSTELLATION_SIZE):
             pxl = np.array(kps[i].pt)
             pnt = ibvs.feature_to_pnt(pxl, depth)
             constellation_pxls[i] = pxl
-            constellation_pnts[i] = pnt - last_pnt
-            last_pnt = pnt
+
+            vec = pnt - root_pnt
+            dist = np.linalg.norm(vec)
+            angle = np.arctan(vec[1]/vec[0])
+            constellation_pnts[i] = [dist, angle]
 
         # Set goal features and image jacobian
         ibvs.set_goal(constellation_pxls, depth, diff)
@@ -68,9 +70,30 @@ while (time.time() - start) < 10:
             sse = 0
             used_kps = []
             curr_constellation_pxls = None
-            last_pnt = root_pnt
 
-            for pnt in constellation_pnts:
+            # Find kp which euclidean distance for first constellation pnt
+            min_err = 75
+            min_err_kp = None
+            for kp in kps:
+                kp_pxl = np.array(kp.pt)
+                kp_pnt = ibvs.feature_to_pnt(kp_pxl, depth)
+                dist = np.linalg.norm(kp_pnt - root_pnt)
+                err = dist - constellation_pnts[0, 0]
+                if err < min_err:
+                    min_err = err
+                    min_err_kp = kp
+
+            # Find difference in angle
+            kp_pxl = np.array(kp.pt)
+            kp_pnt = ibvs.feature_to_pnt(kp_pxl, depth)
+            angle = np.arctan(vec[1]/vec[0])
+            d_angle = angle - constellation_pnts[0, 1]
+
+            for pnt in constellation_pnts[1:]:
+                pnt = np.array(
+                    [pnt[0] * np.cos(pnt[1] + d_angle), pnt[0] * np.sin(1) + d_angle, 0.0])
+                pnt += root_pnt
+
                 # If error is greater than 35, don't bother checking
                 min_err = 75
                 min_err_kp = None
@@ -78,7 +101,7 @@ while (time.time() - start) < 10:
                     if kp not in used_kps:
                         kp_pxl = np.array(kp.pt)
                         kp_pnt = ibvs.feature_to_pnt(kp_pxl, depth)
-                        err = np.linalg.norm(kp_pnt - (last_pnt + pnt))
+                        err = np.linalg.norm(kp_pnt - pnt)
                         if err < min_err:
                             min_err = err
                             min_err_kp = kp
@@ -121,13 +144,11 @@ while (time.time() - start) < 10:
             pos = (int(pxl[0]), int(pxl[1]))
             cv.circle(featimg, pos, 5, (0, 255, 0), -1)
 
-        last_pnt = root_pnt
-        for pnt in constellation_pnts:
-            begin = ibvs.pnt_to_feature(last_pnt)
-            end = ibvs.pnt_to_feature(pnt + last_pnt)
-            cv.line(featimg, tuple(begin.astype(int)),
-                    tuple(end.astype(int)), (0, 255, 0), 5)
-            last_pnt += pnt
+        # for pnt in constellation_pnts:
+        #     begin = ibvs.pnt_to_feature(root_pnt)
+        #     end = ibvs.pnt_to_feature(pnt + root_pnt)
+        #     cv.line(featimg, tuple(begin.astype(int)),
+        #             tuple(end.astype(int)), (0, 255, 0), 5)
 
         # Draw expected location of constellation to output image
         for pxl in ibvs._goal:
