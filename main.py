@@ -93,7 +93,8 @@ while (time.time() - start) < 10:
                     else:
                         curr_constellation_pxls = np.vstack(
                             (curr_constellation_pxls, min_err_kp.pt))
-                    last_pnt = ibvs.feature_to_pnt(np.array(min_err_kp.pt), depth)
+                    last_pnt = ibvs.feature_to_pnt(
+                        np.array(min_err_kp.pt), depth)
                 sse += (min_err**2)
 
             if min_root is None or sse < min_sse:

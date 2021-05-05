@@ -2,22 +2,23 @@ from os import walk, path, mkdir
 import cv2 as cv
 import numpy as np
 
+
 class FeatureFinder(object):
     def __init__(self):
         self.sift = cv.xfeatures2d.SIFT_create()
         self.surf = cv.xfeatures2d.SURF_create(hessianThreshold=400)
         self.orb = cv.ORB_create()
-    
+
     def get_sift(self, img):
         kp, des = self.sift.detectAndCompute(img, None)
         kp = kp[-10:]
-        featimg = cv.drawKeypoints(img, kp, None, (255,0,0), 4)
+        featimg = cv.drawKeypoints(img, kp, None, (255, 0, 0), 4)
         return featimg, kp, des
 
     def get_surf(self, img):
         kp, des = self.surf.detectAndCompute(img, None)
         kp = kp[:6]
-        featimg = cv.drawKeypoints(img, kp, None, (255,0,0), 4)
+        featimg = cv.drawKeypoints(img, kp, None, (255, 0, 0), 4)
         return featimg, kp, des
 
     def get_orb(self, img):
@@ -38,6 +39,7 @@ class FeatureFinder(object):
     def draw_keypoints(self, img, kp):
         return cv.drawKeypoints(img, kp, None, (255, 0, 0), 4)
 
+
 USE_SIFT = True
 USE_SURF = True
 USE_ORB = True
@@ -55,7 +57,7 @@ if __name__ == "__main__":
             sift_path = "/".join(sift_path)
             if not path.isdir(sift_path):
                 mkdir(sift_path)
-        
+
         if USE_SURF:
             # SURF path setup
             surf_path = save_path
