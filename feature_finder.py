@@ -23,6 +23,7 @@ class FeatureFinder(object):
 
     def get_orb(self, img):
         kp, des = self.orb.detectAndCompute(img, None)
+        kp = kp[:10]
         featimg = cv.drawKeypoints(img, kp, None, (255, 0, 0), 4)
         return featimg, kp, des
 
@@ -40,8 +41,8 @@ class FeatureFinder(object):
         return cv.drawKeypoints(img, kp, None, (255, 0, 0), 4)
 
 
-USE_SIFT = True
-USE_SURF = True
+USE_SIFT = False
+USE_SURF = False
 USE_ORB = True
 
 if __name__ == "__main__":

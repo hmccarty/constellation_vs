@@ -36,7 +36,9 @@ while (time.time() - start) < 10:
         diff = goal_pnt - target_pnt
 
         # Assign feature closest to target pixel as root
-        root_pxl = np.array(finder.get_root(kps, target_pxl).pt)
+        root_kp = finder.get_root(kps, target_pxl)
+        kps.remove(root_kp)
+        root_pxl = np.array(root_kp.pt)
         root_pnt = ibvs.feature_to_pnt(root_pxl, depth)
 
         # Assign 4 other features to be members of constellation
@@ -71,7 +73,7 @@ while (time.time() - start) < 10:
             used_kps = []
             curr_constellation_pxls = None
 
-            # Find kp which euclidean distance for first constellation pnt
+            # Find kp with min euclidean distance for first constellation pnt
             min_err = 75
             min_err_kp = None
             for kp in kps:
@@ -84,14 +86,19 @@ while (time.time() - start) < 10:
                     min_err_kp = kp
 
             # Find difference in angle
-            kp_pxl = np.array(kp.pt)
+            kp_pxl = np.array(min_err_kp.pt)
             kp_pnt = ibvs.feature_to_pnt(kp_pxl, depth)
+            vec = kp_pnt - root_pnt
+            print(kp_pnt)
+            print(vec)
             angle = np.arctan(vec[1]/vec[0])
             d_angle = angle - constellation_pnts[0, 1]
+            print(angle)
+            # print(constellation_pnts[0, 1])
 
             for pnt in constellation_pnts[1:]:
                 pnt = np.array(
-                    [pnt[0] * np.cos(pnt[1] + d_angle), pnt[0] * np.sin(1) + d_angle, 0.0])
+                    [pnt[0] * np.cos(pnt[1] + d_angle), pnt[0] * np.sin(pnt[1] + d_angle), 0.0])
                 pnt += root_pnt
 
                 # If error is greater than 35, don't bother checking
@@ -116,8 +123,6 @@ while (time.time() - start) < 10:
                     else:
                         curr_constellation_pxls = np.vstack(
                             (curr_constellation_pxls, min_err_kp.pt))
-                    last_pnt = ibvs.feature_to_pnt(
-                        np.array(min_err_kp.pt), depth)
                 sse += (min_err**2)
 
             if min_root is None or sse < min_sse:
