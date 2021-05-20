@@ -22,10 +22,10 @@ prev_root_pnt = None
 constellation_pnts = None
 target_pxl = np.array([230., 300.])
 goal_pxl = np.array([225., 225.])
-while (time.time() - start) < 10:
+while (time.time() - start) < 15:
     # Get image from sim and find SURF keypoints
     rgb, depth = sim.step()
-    featimg, kps, des = finder.get_surf(rgb)
+    featimg, kps, des = finder.get_orb(rgb)
 
     # Convert target and goal pixels to cartesian space
     target_pnt = ibvs.feature_to_pnt(target_pxl, depth)
@@ -44,6 +44,7 @@ while (time.time() - start) < 10:
         # Assign 4 other features to be members of constellation
         constellation_pxls = np.zeros((CONSTELLATION_SIZE, 2))
         constellation_pnts = np.zeros((CONSTELLATION_SIZE, 2))
+        print(len(kps))
         for i in range(CONSTELLATION_SIZE):
             pxl = np.array(kps[i].pt)
             pnt = ibvs.feature_to_pnt(pxl, depth)
@@ -67,6 +68,8 @@ while (time.time() - start) < 10:
             # Assign keypoint as root
             root_pxl = np.array(kp.pt)
             root_pnt = ibvs.feature_to_pnt(root_pxl, depth)
+            rem_kps = list(kps)
+            rem_kps.remove(kp)
 
             # Find set of features which minimize SSE from constellation
             sse = 0
@@ -74,9 +77,9 @@ while (time.time() - start) < 10:
             curr_constellation_pxls = None
 
             # Find kp with min euclidean distance for first constellation pnt
-            min_err = 75
+            min_err = 250
             min_err_kp = None
-            for kp in kps:
+            for kp in rem_kps:
                 kp_pxl = np.array(kp.pt)
                 kp_pnt = ibvs.feature_to_pnt(kp_pxl, depth)
                 dist = np.linalg.norm(kp_pnt - root_pnt)
@@ -89,20 +92,25 @@ while (time.time() - start) < 10:
             kp_pxl = np.array(min_err_kp.pt)
             kp_pnt = ibvs.feature_to_pnt(kp_pxl, depth)
             vec = kp_pnt - root_pnt
-            print(kp_pnt)
-            print(vec)
             angle = np.arctan(vec[1]/vec[0])
             d_angle = angle - constellation_pnts[0, 1]
-            print(angle)
-            # print(constellation_pnts[0, 1])
+
+            pos = (int(root_pxl[0]), int(root_pxl[1]))
+            pos2 = (int(kp_pxl[0]), int(kp_pxl[1]))
+            # print("Vec: {}, Pos: {} -> {}, Dangle: {}".format(vec, pos, pos2, d_angle))
+            # cv.circle(featimg, pos, 5, (125, 0, 0), -1)
+            # cv.line(featimg, tuple(root_pxl.astype(int)), tuple(
+            #     kp_pxl.astype(int)), (255, 0, 0), 5)
 
             for pnt in constellation_pnts[1:]:
                 pnt = np.array(
                     [pnt[0] * np.cos(pnt[1] + d_angle), pnt[0] * np.sin(pnt[1] + d_angle), 0.0])
                 pnt += root_pnt
+                pxl = ibvs.pnt_to_feature(pnt)
+                cv.circle(featimg, tuple(pxl.astype(int)), 5, (125, 0, 0), -1)
 
-                # If error is greater than 35, don't bother checking
-                min_err = 75
+                # If error is greater than 35, don't bother checkinga
+                min_err = 500
                 min_err_kp = None
                 for kp in kps:
                     if kp not in used_kps:
@@ -130,7 +138,9 @@ while (time.time() - start) < 10:
                 min_sse = sse
                 constellation_pxls = curr_constellation_pxls
 
-        if len(constellation_pxls) < CONSTELLATION_SIZE:
+        print(constellation_pxls)
+        if constellation_pxls is None or \
+            len(constellation_pxls) < CONSTELLATION_SIZE:
             constellation_pnts = None
         else:
             root_pxl = min_root
