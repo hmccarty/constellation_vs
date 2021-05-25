@@ -25,7 +25,7 @@ class FeatureFinder(object):
 
     def get_orb(self, img):
         kp, des = self.orb.detectAndCompute(img, None)
-        kp = kp[:10]
+        kp = kp[:30]
         featimg = cv.drawKeypoints(img, kp, None, (255, 0, 0), 4)
         return featimg, kp, des
 
@@ -38,6 +38,12 @@ class FeatureFinder(object):
                 min = dist
                 min_kp = kp
         return min_kp
+
+    def get_closest_idxs(self, kps, goal_pxl):
+        dists = np.array()
+        for kp in kps:
+            dists.append(np.linalg.norm(goal_pxl - np.array(kp.pt)))
+        return np.argsort(dists)
 
     def draw_keypoints(self, img, kp):
         return cv.drawKeypoints(img, kp, None, (255, 0, 0), 4)
