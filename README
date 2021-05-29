@@ -1,19 +1,10 @@
-# Constellation-based approach to VS
+# Constellation-based framework for robust visual servoing
 
 ## Methodology
 
-HandleNewFrame()
-- Extract features using ORB
-- Search points closest to our desired point
-    - Assume point is centroid
-    - Find features relative to centroid
-    - If constellation exists:
-        - Check for match
-        - If match:
-            - Apply jacobian
-            - return velocity
-    - Else:
-        - Store current state as constellation
-        - Use features from constellation to generate jacobian
-        - Apply jacobian
-        - return velocity
+Derive geometric information from unreliable, local features to create reliable, global information that can be used in the context of visual servoing.
+
+This is done through several techniques:
+    - Feature selection criteria
+    - Geometric hashing
+    - Fractal-like constellation preprocessing
