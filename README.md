@@ -2,9 +2,9 @@
 
 ## Methodology
 
-Derive geometric information from unreliable, local features to create reliable, global information that can be used in the context of visual servoing.
+Produce stable, visual-odometry information from a set of unreliable, local features.
 
-This is done through several techniques:
-- Feature selection criteria
+Several techniques are used in combination to achieve this:
+- Feature selection using geometric constraints
 - Geometric hashing
 - Fractal-like constellation preprocessing
