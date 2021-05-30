@@ -43,11 +43,15 @@ class GeoHasher(object):
         result = {}
         max_frame = None
 
-        framed_pnts = np.linalg.solve(frame, pnts).T
         try:
             world = np.linalg.inv(frame)
+            framed_pnts = np.linalg.solve(frame, pnts).T
         except np.linalg.LinAlgError:
-            return
+            return None, None
+
+        frame_list = []
+        for pnt in frame.T:
+            frame_list.append(pnt)
 
         for pnt in framed_pnts:
             frames = self.get(pnt)
@@ -60,14 +64,14 @@ class GeoHasher(object):
                         result[frame] = [pnt]
 
                     if len(result[frame]) > self.thresh:
-                        return result[frame]
+                        return frame_list, result[frame]
                     elif max_frame is None or \
                             len(result[frame]) > len(result[max_frame]):
                         max_frame = frame
 
         if max_frame is not None:
-            return result[max_frame]
-        return None
+            return frame_list, result[max_frame]
+        return None, None
 
     def clear(self):
         self.num_frames = 0
