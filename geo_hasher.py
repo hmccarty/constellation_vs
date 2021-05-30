@@ -9,6 +9,13 @@ class GeoHasher(object):
         self.bin_size = bin_size
         self.thresh = thresh
 
+    def calculate_frame(self, pnts):
+        a = pnts[1] - pnts[0]
+        b = pnts[2] - pnts[0]
+        b -= (np.dot(a, b) / np.dot(a, a)) * a
+        c = np.cross(b, a)
+        return np.array([a, b, c]).T
+
     def store(self, frame, pnts):
         # Store frame under specific id
         frame_id = self.num_frames

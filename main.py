@@ -17,7 +17,7 @@ CAM_FARTHEST = 8.0  # meters
 CONSTELLATION_SIZE = 9  # number of points
 X_HASH_SIZE = 0.1  # meters
 Y_HASH_SIZE = 0.1  # meters
-Z_HASH_SIZE = 0.01  # meters
+Z_HASH_SIZE = 0.1  # meters
 
 sim = Sim(headless=True)
 finder = FeatureFinder()
@@ -77,8 +77,11 @@ while (time.time() - start) < 10:
 
         for frame_idxs in combinations(range(len(pnts)), 3):
             # Calculate frame
-            print(pnts.shape)
-            frame = np.array(pnts).T[:, frame_idxs]
+            frame_pnts = []
+            for idx in frame_idxs:
+                frame_pnts.append(pnts[idx])
+            frame = constellation.calculate_frame(frame_pnts)
+            print(frame)
 
             # Remove frame pnts from remaining pnts
             rem_pnts = np.array(pnts).T
@@ -103,7 +106,10 @@ while (time.time() - start) < 10:
 
         for frame_idxs in combinations(range(len(pnts)), 3):
             # Calculate frame
-            frame = np.array(pnts).T[:, frame_idxs]
+            frame_pnts = []
+            for idx in frame_idxs:
+                frame_pnts.append(pnts[idx])
+            frame = constellation.calculate_frame(frame_pnts)
 
             # Remove frame pnts from remaining pnts
             rem_pnts = np.array(pnts).T
