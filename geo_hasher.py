@@ -12,8 +12,21 @@ class GeoHasher(object):
     def calculate_frame(self, pnts):
         a = pnts[1] - pnts[0]
         b = pnts[2] - pnts[0]
-        b -= (np.dot(a, b) / np.dot(a, a)) * a
-        c = np.cross(b, a)
+
+        # Reject if lines are colinear
+        if np.linalg.norm(np.cross(a, b)) < 1:
+            return None
+
+        # Use gram-schmidt process to second basis vector
+        b -= (np.dot(a, b) / (np.linalg.norm(a)**2)) * a
+
+        # Take the cross product of current basis to find last basis vector
+        c = np.cross(a, b)
+
+        # Normalize to create orthonormal basis
+        a /= np.linalg.norm(a)
+        b /= np.linalg.norm(b)
+        c /= np.linalg.norm(c)
         return np.array([a, b, c]).T
 
     def store(self, frame, pnts):
@@ -54,15 +67,12 @@ class GeoHasher(object):
             world = np.linalg.inv(frame)
             framed_pnts = np.linalg.solve(frame, pnts).T
         except np.linalg.LinAlgError:
-            return None, None
-
-        frame_list = []
-        for pnt in frame.T:
-            frame_list.append(pnt)
+            return None
 
         for pnt in framed_pnts:
             frames = self.get(pnt)
             if frames is not None:
+                print(pnt)
                 pnt = np.linalg.solve(world, pnt)
                 for frame in frames:
                     if frame in result:
@@ -71,14 +81,14 @@ class GeoHasher(object):
                         result[frame] = [pnt]
 
                     if len(result[frame]) > self.thresh:
-                        return frame_list, result[frame]
+                        return result[frame]
                     elif max_frame is None or \
                             len(result[frame]) > len(result[max_frame]):
                         max_frame = frame
 
         if max_frame is not None:
-            return frame_list, result[max_frame]
-        return None, None
+            return result[max_frame]
+        return None
 
     def clear(self):
         self.num_frames = 0

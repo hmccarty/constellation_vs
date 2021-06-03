@@ -60,7 +60,7 @@ class Sim(object):
         # Translate camera
         translation = tf[:3] * self.dt
         translation[1] *= -1
-        # translation[0] += 0.1
+        translation[0] += 0.1
         self.camPosition += translation
         self.targetPosition += translation
 
