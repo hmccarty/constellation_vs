@@ -1,6 +1,5 @@
 from sim import Sim
 from feature_finder import FeatureFinder
-from feature_matcher import FeatureMatcher
 from geo_hasher import GeoHasher
 from itertools import permutations, combinations
 import cv2 as cv
@@ -8,16 +7,16 @@ import numpy as np
 import time
 from ibvs import IBVS
 
-VOTE_THRESHOLD = 9
+VOTE_THRESHOLD = 5
 
 CAM_WIDTH = 450  # pixels
 CAM_HEIGHT = 450  # pixels
 CAM_CLOSEST = 0.1  # meters
 CAM_FARTHEST = 8.0  # meters
-CONSTELLATION_SIZE = 9  # number of points
+CONSTELLATION_SIZE = 5  # number of points
 X_HASH_SIZE = 1.0  # meters
 Y_HASH_SIZE = 1.0  # meters
-Z_HASH_SIZE = 0.1  # meters
+Z_HASH_SIZE = 1.0  # meters
 
 sim = Sim(headless=True)
 finder = FeatureFinder()
