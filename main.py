@@ -14,9 +14,9 @@ CAM_HEIGHT = 450  # pixels
 CAM_CLOSEST = 0.1  # meters
 CAM_FARTHEST = 8.0  # meters
 CONSTELLATION_SIZE = 5  # number of points
-X_HASH_SIZE = 1.0  # meters
-Y_HASH_SIZE = 1.0  # meters
-Z_HASH_SIZE = 1.0  # meters
+X_HASH_SIZE = 20.0  # meters
+Y_HASH_SIZE = 20.0  # meters
+Z_HASH_SIZE = 0.5  # meters
 
 sim = Sim(headless=True)
 finder = FeatureFinder()
@@ -83,10 +83,17 @@ while (time.time() - start) < 10:
             if frame is not None:
                 # Remove frame pnts from remaining pnts
                 rem_pnts = np.array(pnts).T
-                #rem_pnts = np.delete(rem_pnts, frame_idxs, 1)
+                # rem_pnts = np.delete(rem_pnts, frame_idxs, 1)
 
                 # Frame and store remaining points
-                constellation.store(frame, rem_pnts)
+                framed_pnts = constellation.store(frame, rem_pnts)
+                draw = []
+                for i in range(len(framed_pnts)):
+                    draw.append(ibvs.pnt_to_feature(framed_pnts[i]))
+
+                draw2 = []
+                for i in range(len(frame_pnts)):
+                    draw2.append(ibvs.pnt_to_feature(frame_pnts[i]))
 
     #                           #
     #   Match constellation     #
@@ -101,7 +108,7 @@ while (time.time() - start) < 10:
         for kp in kps:
             pnts.append(ibvs.feature_to_pnt(np.array(kp.pt), depth))
 
-        for frame_idxs in combinations(range(len(pnts)), 3):
+        for frame_idxs in permutations(range(len(pnts)), 3):
             # Calculate frame
             frame_pnts = []
             for idx in frame_idxs:
@@ -113,10 +120,20 @@ while (time.time() - start) < 10:
                 rem_pnts = np.array(pnts).T
                 # rem_pnts = np.delete(rem_pnts, frame_idxs, 1)
 
-                possible_pnts = constellation.vote(frame, rem_pnts)
+                possible_pnts, framed_pnts = constellation.vote(
+                    frame, rem_pnts)
                 if possible_pnts is not None and \
                         len(possible_pnts) > len(matched_pnts):
                     matched_pnts = possible_pnts
+
+                # if framed_pnts is not None:
+                #     draw3 = []
+                #     for i in range(len(framed_pnts)):
+                #         draw3.append(ibvs.pnt_to_feature(framed_pnts[i]))
+
+                #     for pxl in draw3:
+                #         pos = (int(pxl[0]), int(pxl[1]))
+                #         cv.circle(featimg, pos, 5, (125, 125, 0), -1)
 
         if matched_pnts is not None:
             for pnt in matched_pnts:
@@ -136,6 +153,14 @@ while (time.time() - start) < 10:
         for pxl in feats:
             pos = (int(pxl[0]), int(pxl[1]))
             cv.circle(featimg, pos, 5, (0, 255, 0), -1)
+
+        for pxl in draw:
+            pos = (int(pxl[0]), int(pxl[1]))
+            cv.circle(featimg, pos, 5, (125, 125, 0), -1)
+
+        for pxl in draw2:
+            pos = (int(pxl[0]), int(pxl[1]))
+            cv.circle(featimg, pos, 5, (0, 125, 125), -1)
 
     # Show image and sleep for sim
     cv.imshow("Output Image", featimg)

@@ -26,7 +26,7 @@ class FeatureFinder(object):
     def get_orb(self, img):
         kp, des = self.orb.detectAndCompute(img, None)
         # kp = kp[:30]
-        kp = kp[:5]
+        kp = kp[:15]
         featimg = cv.drawKeypoints(img, kp, None, (255, 0, 0), 4)
         return featimg, kp, des
 

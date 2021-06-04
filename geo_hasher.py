@@ -39,7 +39,10 @@ class GeoHasher(object):
 
         # Store framed pnt in 3d dictionary
         for pnt in framed_pnts:
+            print(pnt)
+            print(self.bin_size)
             idx = (pnt / self.bin_size).astype(int)
+            print(idx)
             if idx[0] in self.map:
                 if idx[1] in self.map[idx[0]]:
                     if idx[2] in self.map[idx[0]][idx[1]]:
@@ -50,6 +53,8 @@ class GeoHasher(object):
                     self.map[idx[0]][idx[1]] = {idx[2]: [frame_id]}
             else:
                 self.map[idx[0]] = {idx[1]: {idx[2]: [frame_id]}}
+
+        return framed_pnts
 
     def get(self, pnt):
         idx = (pnt / self.bin_size).astype(int)
@@ -67,12 +72,11 @@ class GeoHasher(object):
             world = np.linalg.inv(frame)
             framed_pnts = np.linalg.solve(frame, pnts).T
         except np.linalg.LinAlgError:
-            return None
+            return None, None
 
         for pnt in framed_pnts:
             frames = self.get(pnt)
             if frames is not None:
-                print(pnt)
                 pnt = np.linalg.solve(world, pnt)
                 for frame in frames:
                     if frame in result:
@@ -80,15 +84,13 @@ class GeoHasher(object):
                     else:
                         result[frame] = [pnt]
 
-                    if len(result[frame]) > self.thresh:
-                        return result[frame]
-                    elif max_frame is None or \
+                    if max_frame is None or \
                             len(result[frame]) > len(result[max_frame]):
                         max_frame = frame
 
         if max_frame is not None:
-            return result[max_frame]
-        return None
+            return result[max_frame], framed_pnts
+        return None, None
 
     def clear(self):
         self.num_frames = 0
