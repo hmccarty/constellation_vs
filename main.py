@@ -14,9 +14,9 @@ CAM_HEIGHT = 450  # pixels
 CAM_CLOSEST = 0.1  # meters
 CAM_FARTHEST = 8.0  # meters
 CONSTELLATION_SIZE = 5  # number of points
-X_HASH_SIZE = 2.  # meters
-Y_HASH_SIZE = 2.  # meters
-Z_HASH_SIZE = 2.  # meters
+X_HASH_SIZE = 15.  # meters
+Y_HASH_SIZE = 15.  # meters
+Z_HASH_SIZE = 1.  # meters
 
 sim = Sim(headless=True)
 finder = FeatureFinder()

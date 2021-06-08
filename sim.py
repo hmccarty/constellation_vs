@@ -60,13 +60,13 @@ class Sim(object):
         # Translate camera
         translation = tf[:3] * self.dt
         translation[1] *= -1
-        translation[0] += 0.1
+        # translation[0] += 0.1
         self.camPosition += translation
         self.targetPosition += translation
 
         # Rotate camera
         rotation = tf[3:] * self.dt
-        # rotation[2] += 0.05
+        rotation[2] += 0.05
         rotation = tf3d.euler.euler2mat(rotation[0], rotation[1], rotation[2])
         unit = self.targetPosition - self.camPosition
         self.targetPosition = self.camPosition + np.matmul(rotation, unit)
