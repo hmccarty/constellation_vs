@@ -5,24 +5,27 @@ import numpy as np
 
 class FeatureFinder(object):
     def __init__(self):
-        self.sift = cv.xfeatures2d.SIFT_create()
-        self.surf = cv.xfeatures2d.SURF_create(hessianThreshold=400)
+        # self.sift = cv.xfeatures2d.SIFT_create()
+        # self.surf = cv.xfeatures2d.SURF_create(hessianThreshold=400)
         self.orb = cv.ORB_create()
 
     def get_sift(self, img):
-        kp, des = self.sift.detectAndCompute(img, None)
-        kp = kp[-10:]
-        featimg = cv.drawKeypoints(img, kp, None, (255, 0, 0), 4)
-        return featimg, kp, des
+        # kp, des = self.sift.detectAndCompute(img, None)
+        # kp = kp[-10:]
+        # featimg = cv.drawKeypoints(img, kp, None, (255, 0, 0), 4)
+        # return featimg, kp, des
+        pass
 
     def get_surf(self, img):
-        kp, des = self.surf.detectAndCompute(img, None)
-        kp = kp[:6]
-        featimg = cv.drawKeypoints(img, kp, None, (255, 0, 0), 4)
-        return featimg, kp, des
+        # kp, des = self.surf.detectAndCompute(img, None)
+        # kp = kp[:6]
+        # featimg = cv.drawKeypoints(img, kp, None, (255, 0, 0), 4)
+        # return featimg, kp, des
+        pass
 
     def get_orb(self, img):
         kp, des = self.orb.detectAndCompute(img, None)
+        kp = kp[:30]
         featimg = cv.drawKeypoints(img, kp, None, (255, 0, 0), 4)
         return featimg, kp, des
 
@@ -36,12 +39,18 @@ class FeatureFinder(object):
                 min_kp = kp
         return min_kp
 
+    def get_closest_idxs(self, kps, goal_pxl):
+        dists = np.array()
+        for kp in kps:
+            dists.append(np.linalg.norm(goal_pxl - np.array(kp.pt)))
+        return np.argsort(dists)
+
     def draw_keypoints(self, img, kp):
         return cv.drawKeypoints(img, kp, None, (255, 0, 0), 4)
 
 
-USE_SIFT = True
-USE_SURF = True
+USE_SIFT = False
+USE_SURF = False
 USE_ORB = True
 
 if __name__ == "__main__":

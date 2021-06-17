@@ -87,7 +87,7 @@ class IBVS(object):
 
             Parameters:
                 feature (1x2 numpy array): pos of a single feature
-                depth (wxh numpy array): physical depth of every pixel
+                depth (hxw numpy array): physical depth of every pixel
 
             Returns:
                 pnt (1x3 numpy array): pos of the cartesian pnt
