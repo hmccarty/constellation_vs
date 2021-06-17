@@ -8,7 +8,7 @@ class IBVS(object):
         self._focal_x = focal_x
         self._focal_y = focal_y
         self._pxl_size = pxl_size
-        self._lambda = 0.3
+        self._lambda = 0.2
         self._L = None
         self._goal = None
         self._Z = 0.0

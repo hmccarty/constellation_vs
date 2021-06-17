@@ -1,22 +1,23 @@
+from numpy.linalg.linalg import _is_empty_2d
 from sim import Sim
 from feature_finder import FeatureFinder
-from feature_matcher import FeatureMatcher
 from geo_hasher import GeoHasher
-from itertools import combinations
+from itertools import permutations, combinations
 import cv2 as cv
 import numpy as np
 import time
 from ibvs import IBVS
+from util import rigid_tf
 
-VOTE_THRESHOLD = 2
+VOTE_THRESHOLD = 5
 
 CAM_WIDTH = 450  # pixels
 CAM_HEIGHT = 450  # pixels
 CAM_CLOSEST = 0.1  # meters
 CAM_FARTHEST = 8.0  # meters
-CONSTELLATION_SIZE = 6  # number of points
-X_HASH_SIZE = 1.  # meters
-Y_HASH_SIZE = 1.  # meters
+CONSTELLATION_SIZE = 5  # number of points
+X_HASH_SIZE = 7.0  # meters
+Y_HASH_SIZE = 7.0  # meters
 Z_HASH_SIZE = 1.  # meters
 
 sim = Sim(headless=True)
@@ -32,20 +33,27 @@ start = time.time()
 prev_root_pnt = None
 
 # Geometric hashing for constellation
-constellation = GeoHasher(
-    (X_HASH_SIZE, Y_HASH_SIZE, Z_HASH_SIZE), VOTE_THRESHOLD)
+constellation = GeoHasher((X_HASH_SIZE, Y_HASH_SIZE, Z_HASH_SIZE),
+                          VOTE_THRESHOLD,
+                          CONSTELLATION_SIZE)
 
 # Preset visual-servoing command
 target_pxl = np.array([230., 300.])
 goal_pxl = np.array([CAM_WIDTH / 2., CAM_HEIGHT / 2.])
 
 # Holds features with desired selection criteria
+pnts = None
+prev_pnts = None
 feats = None
+draw = []
 
-# Perform VS for 15 seconds
-vel = np.array([0.0, 0., 0., 0., 0., 0.])
-while (time.time() - start) < 10:
+# Perform VS for t seconds
+t = 5
+vel = np.array([0., 0., 0., 0., 0., 0.])
+prev_time = start
+while (time.time() - start) < t:
     # Get image from sim and find ORB keypoints
+    print("Starting new frame")
     rgb, depth = sim.step()
     featimg, kps, des = finder.get_orb(rgb)
 
@@ -72,18 +80,21 @@ while (time.time() - start) < 10:
         #                           #
         #   Frame constellation     #
         #                           #
-
-        for frame_idxs in combinations(range(len(pnts)), 3):
+        for frame_idxs in permutations(range(len(pnts)), 3):
             # Calculate frame
-            frame = np.array(pnts).T[:, frame_idxs]
+            frame_pnts = []
+            for idx in frame_idxs:
+                frame_pnts.append(pnts[idx])
+            origin, frame = constellation.calculate_frame(frame_pnts)
 
-            # Remove frame pnts from remaining pnts
-            rem_pnts = np.array(pnts).T
-            rem_pnts = np.delete(rem_pnts, frame_idxs, 1)
+            if frame is not None:
+                # Remove frame pnts from remaining pnts
+                rem_pnts = np.array(pnts).T
 
-            # Hash and store frame points
-            constellation.store(frame, rem_pnts)
+                # Frame and store remaining points
+                framed_pnts = constellation.store(origin, frame, rem_pnts)
 
+        ibvs.set_goal(feats, depth, diff)
     #                           #
     #   Match constellation     #
     #                           #
@@ -91,6 +102,7 @@ while (time.time() - start) < 10:
         # Get all features
         feats = []
         pnts = []
+        matched_frame = []
         matched_pnts = []
 
         for kp in kps:
@@ -98,38 +110,69 @@ while (time.time() - start) < 10:
 
         for frame_idxs in combinations(range(len(pnts)), 3):
             # Calculate frame
-            frame = np.array(pnts).T[:, frame_idxs]
+            frame_pnts = []
+            for idx in frame_idxs:
+                frame_pnts.append(pnts[idx])
+            origin, frame = constellation.calculate_frame(frame_pnts)
 
-            # Remove frame pnts from remaining pnts
-            rem_pnts = np.array(pnts).T
-            rem_pnts = np.delete(rem_pnts, frame_idxs, 1)
+            if frame is not None:
+                # Remove frame pnts from remaining pnts
+                rem_pnts = np.array(pnts).T
 
-            possible_pnts = constellation.vote(frame, rem_pnts)
-            if possible_pnts is not None and \
-                    len(possible_pnts) > len(matched_pnts):
-                matched_pnts = possible_pnts
+                possible_pnts, cnt = constellation.vote(
+                    origin, frame, rem_pnts)
+                if possible_pnts is not None and \
+                        cnt > len(matched_pnts):
+                    matched_pnts = possible_pnts
+
+            if len(matched_pnts) >= VOTE_THRESHOLD:
+                break
 
         if matched_pnts is not None:
+            pnts = matched_pnts
             for pnt in matched_pnts:
-                feats.append(ibvs.pnt_to_feature(pnt))
+                if pnt is not None:
+                    feats.append(ibvs.pnt_to_feature(pnt))
 
     #              #
     #   Update     #
     #              #
 
-    if constellation is not None:
-        # Use velocity command to converge goal to target
-        sim.applyVelocity(vel)
+    # Draw target
+    target_pxl = ibvs.pnt_to_feature(target_pnt)
+    cv.circle(featimg, tuple(target_pxl.astype(int)), 15, (0, 0, 255), -1)
+
+    # Draw goal
+    cv.circle(featimg, tuple(goal_pxl.astype(int)), 15, (125, 125, 0), -1)
+
+    if not constellation.is_empty():
+        print("Number of features used: {}".format(len(feats)))
 
         # Draw constellation to output image
         for pxl in feats:
             pos = (int(pxl[0]), int(pxl[1]))
             cv.circle(featimg, pos, 5, (0, 255, 0), -1)
 
+        if len(feats) == CONSTELLATION_SIZE:
+            vel = ibvs.execute(feats, depth)
+            if prev_pnts is not None:
+                print(prev_pnts)
+                print(pnts)
+                R, t = rigid_tf(prev_pnts, pnts)
+                print(t)
+
+        sim.applyVelocity(vel)
+
+    prev_pnts = pnts
+
+    # now = time.time()
+    # print("Time taken: {}".format(now - prev_time))
+    # prev_time = now
+
     # Show image and sleep for sim
     cv.imshow("Output Image", featimg)
+    print("Frame finished")
     cv.waitKey()
-    time.sleep(sim.dt)
 
 cv.destroyAllWindows()
 sim.disconnect()

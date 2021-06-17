@@ -1,13 +1,14 @@
 import cv2 as cv
 import numpy as np
 
+
 class FeatureMatcher(object):
     IMG = 0
     KP = 1
     DES = 2
 
     FLANN_INDEX_KDTREE = 1
-    INDEX_PARAMS = dict(algorithm = FLANN_INDEX_KDTREE, trees = 5)
+    INDEX_PARAMS = dict(algorithm=FLANN_INDEX_KDTREE, trees=5)
     SEARCH_PARAMS = dict(checks=50)
 
     def __init__(self):
@@ -30,7 +31,7 @@ class FeatureMatcher(object):
             if self.orbprev != None:
                 # Perform brute-force matching then sort by distance
                 matches = self.orb.match(self.orbprev[self.DES], des)
-                matches = sorted(matches, key = lambda x:x.distance)[:3]
+                matches = sorted(matches, key=lambda x: x.distance)
                 self.matches = matches
 
                 # Draw matches on new image

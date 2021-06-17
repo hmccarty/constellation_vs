@@ -17,12 +17,12 @@ class Sim(object):
 
         # Load and texture plane with features
         planeId = p.loadURDF('plane.urdf')
-        textureId = p.loadTexture('untitled.png')
+        textureId = p.loadTexture('sim_files/blank-texture.png')
         p.changeVisualShape(planeId, -1, textureUniqueId=textureId)
 
         cubeId = p.loadURDF('cube.urdf', [0, 0, 1], p.getQuaternionFromEuler(
             [0, 0, 0]), globalScaling=1.5)
-        textureId = p.loadTexture('texture.png')
+        textureId = p.loadTexture('sim_files/dot-texture.png')
         p.changeVisualShape(cubeId, -1, textureUniqueId=textureId)
 
         # Setup camera params
@@ -37,7 +37,7 @@ class Sim(object):
                                                         nearVal=self.nearVal,
                                                         farVal=self.farVal)
 
-        self.camPosition = np.array([-0.5, 1.0, 4.])
+        self.camPosition = np.array([-0.5, 0.5, 4.])
         self.targetPosition = np.array([0., 0., 0.])
         self.upVector = np.array([0., 1., 0.])
 
@@ -65,7 +65,6 @@ class Sim(object):
 
         # Rotate camera
         rotation = tf[3:] * self.dt
-        # rotation[2] += 0.1
         rotation = tf3d.euler.euler2mat(rotation[0], rotation[1], rotation[2])
         unit = self.targetPosition - self.camPosition
         self.targetPosition = self.camPosition + np.matmul(rotation, unit)

@@ -1,3 +1,7 @@
+# Only track compressed image folders
+raw_images/*
+!raw_images/*.tar.gz
+
 # Dataset results
 orb_features/
 sift_features/
