@@ -10,13 +10,13 @@ from ibvs import IBVS
 from util import rigid_tf
 from scipy.spatial.distance import cdist
 
-VOTE_THRESHOLD = 10
+VOTE_THRESHOLD = 5
 
 CAM_WIDTH = 450  # pixels
 CAM_HEIGHT = 450  # pixels
 CAM_CLOSEST = 0.1  # meters
 CAM_FARTHEST = 8.0  # meters
-CONSTELLATION_SIZE = 10  # number of points
+CONSTELLATION_SIZE = 5  # number of points
 X_HASH_SIZE = 15.  # meters
 Y_HASH_SIZE = 15.  # meters
 Z_HASH_SIZE = 1.  # meters
@@ -49,7 +49,7 @@ feats = None
 draw = []
 
 # Perform VS for t seconds
-t = 5
+t = 50
 vel = np.array([0., 0., 0., 0., 0., 0.])
 prev_time = start
 while (time.time() - start) < t:
@@ -89,19 +89,18 @@ while (time.time() - start) < t:
         dist = np.square(np.triu(dist))
         dist = np.mean(np.divide(1, dist, where=dist != 0), axis=1)
         # print(dist)
-        idxs = dist.argsort()[:10][::-1]
+        idxs = dist.argsort()[:CONSTELLATION_SIZE][::-1]
+
+        # Sort points to find those within maximize min-distance
+        idxs = dist.argsort()[::-1][:CONSTELLATION_SIZE]
         new_pnts = []
         new_feats = []
         for i in idxs:
-            new_feats.append(feats[i])
             new_pnts.append(pnts[i])
+            new_feats.append(feats[i])
 
         pnts = new_pnts
         feats = new_feats
-        # for i in range(0, len(kps), int(len(kps) / CONSTELLATION_SIZE)):
-        #     feat = np.array(kps[i].pt)
-        #     feats.append(feat)
-        #     pnts.append(ibvs.feature_to_pnt(feat, depth))
 
         #                           #
         #   Frame constellation     #
@@ -135,7 +134,7 @@ while (time.time() - start) < t:
         for kp in kps:
             pnts.append(ibvs.feature_to_pnt(np.array(kp.pt), depth))
 
-        for frame_idxs in combinations(range(len(pnts)), 3):
+        for frame_idxs in permutations(range(len(pnts)), 3):
             # Calculate frame
             frame_pnts = []
             for idx in frame_idxs:
@@ -147,7 +146,7 @@ while (time.time() - start) < t:
                 rem_pnts = np.array(pnts).T
 
                 possible_pnts, cnt = constellation.vote(
-                    origin, frame, rem_pnts) 
+                    origin, frame, rem_pnts)
                 if possible_pnts is not None and \
                         cnt > matched_cnt:
                     matched_pnts = possible_pnts
@@ -166,12 +165,8 @@ while (time.time() - start) < t:
     #   Update     #
     #              #
 
-    # # Draw target
-    # target_pxl = ibvs.pnt_to_feature(target_pnt)
-    # cv.circle(featimg, tuple(target_pxl.astype(int)), 15, (0, 0, 255), -1)
-
     # # Draw goal
-    # cv.circle(featimg, tuple(goal_pxl.astype(int)), 15, (125, 125, 0), -1)
+    cv.circle(featimg, tuple(goal_pxl.astype(int)), 15, (125, 125, 0), -1)
 
     if not constellation.is_empty():
         print("Number of features used: {}".format(len(feats)))
@@ -185,8 +180,13 @@ while (time.time() - start) < t:
             vel = ibvs.execute(feats, depth)
             if prev_pnts is not None:
                 R, trans = rigid_tf(prev_pnts, pnts)
-
+                target_pnt = target_pnt + trans.T[0]
+                print("Found translation: ", trans)
         sim.applyVelocity(vel)
+
+    # Draw target
+    target_pxl = ibvs.pnt_to_feature(target_pnt)
+    cv.circle(featimg, tuple(target_pxl.astype(int)), 15, (0, 0, 255), -1)
 
     prev_pnts = pnts
 

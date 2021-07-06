@@ -31,7 +31,6 @@ class GeoHasher(object):
         c /= np.linalg.norm(c)
 
         return pnts[0], np.array([a, b, c]).T
-        # return pnts[0], np.array([a, b]).T
 
     def store(self, origin, frame, pnts):
         # Store frame under specific id
@@ -96,13 +95,13 @@ class GeoHasher(object):
 
             # Fix this godfosaken mess that some may call code
             frames = self.get(idx)
-            print(frames)
+            # result: [frames[pnts in order, count]]
             if frames is not None:
                 pnt = np.linalg.solve(world, pnt)
                 pnt += origin
                 for frame in frames:
                     if frame[0] in result:
-                        print(result[frame[0]][0])
+                        result[frame[0]][0][frame[1]]
                         if result[frame[0]][0][frame[1]] is None:
                             result[frame[0]][1] += 1
                         result[frame[0]][0][frame[1]] = pnt
