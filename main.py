@@ -10,13 +10,13 @@ from ibvs import IBVS
 from util import rigid_tf
 from scipy.spatial.distance import cdist
 
-VOTE_THRESHOLD = 10
+VOTE_THRESHOLD = 5
 
 CAM_WIDTH = 450  # pixels
 CAM_HEIGHT = 450  # pixels
 CAM_CLOSEST = 0.1  # meters
 CAM_FARTHEST = 8.0  # meters
-CONSTELLATION_SIZE = 10  # number of points
+CONSTELLATION_SIZE = 5  # number of points
 X_HASH_SIZE = 15.  # meters
 Y_HASH_SIZE = 15.  # meters
 Z_HASH_SIZE = 1.  # meters
@@ -89,7 +89,7 @@ while (time.time() - start) < t:
         dist = np.square(np.triu(dist))
         dist = np.mean(np.divide(1, dist, where=dist != 0), axis=1)
         # print(dist)
-        idxs = dist.argsort()[:10][::-1]
+        idxs = dist.argsort()[:CONSTELLATION_SIZE][::-1]
         new_pnts = []
         new_feats = []
         for i in idxs:
@@ -147,7 +147,7 @@ while (time.time() - start) < t:
                 rem_pnts = np.array(pnts).T
 
                 possible_pnts, cnt = constellation.vote(
-                    origin, frame, rem_pnts) 
+                    origin, frame, rem_pnts)
                 if possible_pnts is not None and \
                         cnt > matched_cnt:
                     matched_pnts = possible_pnts
@@ -183,8 +183,8 @@ while (time.time() - start) < t:
 
         if len(feats) == CONSTELLATION_SIZE:
             vel = ibvs.execute(feats, depth)
-            if prev_pnts is not None:
-                R, trans = rigid_tf(prev_pnts, pnts)
+            # if prev_pnts is not None:
+            # R, trans = rigid_tf(prev_pnts, pnts)
 
         sim.applyVelocity(vel)
 

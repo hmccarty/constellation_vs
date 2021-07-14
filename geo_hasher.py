@@ -96,13 +96,11 @@ class GeoHasher(object):
 
             # Fix this godfosaken mess that some may call code
             frames = self.get(idx)
-            print(frames)
             if frames is not None:
                 pnt = np.linalg.solve(world, pnt)
                 pnt += origin
                 for frame in frames:
                     if frame[0] in result:
-                        print(result[frame[0]][0])
                         if result[frame[0]][0][frame[1]] is None:
                             result[frame[0]][1] += 1
                         result[frame[0]][0][frame[1]] = pnt
